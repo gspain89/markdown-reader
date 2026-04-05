@@ -1,0 +1,144 @@
+# Markdown Reader
+
+A beautiful, native macOS Markdown viewer with warm, Claude-inspired typography and styling.
+
+Built with Swift and WKWebView — no Electron, no bloat. Just a fast, lightweight `.app` that opens `.md` files the way they deserve to be read.
+
+## Why
+
+Every developer reads Markdown daily, yet most tools render it either too plainly or require a heavyweight framework. Markdown Reader gives you a polished reading experience in a native macOS app under 2 MB, with the warm color palette and thoughtful typography inspired by Claude's artifact rendering.
+
+## Features
+
+### Reading Experience
+- **Claude-inspired design** — Warm sand-beige light theme and matching dark theme with carefully tuned typography
+- **Serif body text** — Uses macOS's New York typeface for comfortable long-form reading (Korean: AppleMyungjo)
+- **Sans-serif headings** — Clean heading hierarchy with system font (Korean: Apple SD Gothic Neo)
+- **Light / Dark / Auto** — Follows your system appearance or choose manually
+
+### Navigation
+- **Table of Contents sidebar** — Auto-generated from headings, highlights your current position as you scroll, click to jump (Cmd+Shift+T)
+- **Breadcrumb path bar** — See where you are, click directories to browse sibling files
+- **Back / Forward** — Navigate between linked documents (Cmd+[ / Cmd+])
+- **Sibling file list** — See other `.md` files in the same directory
+- **Reading progress bar** — Thin accent bar at the top shows scroll progress
+
+### Content Support
+- **GitHub Flavored Markdown (GFM)** — Tables, task lists, strikethrough, autolinks
+- **Syntax-highlighted code blocks** — 180+ languages via highlight.js, with one-click copy button
+- **Mermaid diagrams** — Flowcharts, sequence diagrams, and more rendered inline
+- **KaTeX math** — LaTeX math expressions: `$E = mc^2$` inline or `$$..$$` display
+- **Local images** — Relative image paths resolved correctly
+- **YAML frontmatter** — Detected and hidden from rendered output
+
+### Productivity
+- **Auto-reload** — File changes are detected and the view refreshes automatically (great for editing in another tool)
+- **Export to PDF** — Beautifully formatted A4 PDF with print-optimized styles (Cmd+Shift+E)
+- **Source view toggle** — Switch between rendered and raw Markdown (Cmd+U)
+- **Scroll position memory** — Reopen a file and continue where you left off
+- **Word count & reading time** — Shown in the status bar
+- **Recent files** — Quick access from File menu
+
+### Settings
+- **Font family** — Default Serif, Sans, System, or Monospace
+- **Font size** — 12 px to 28 px (also via Cmd+/-)
+- **Content width** — Narrow (600 px), Standard (720 px), Wide (900 px), or Full
+- **Toggle features** — TOC, breadcrumb, word count, progress bar, Mermaid, KaTeX
+
+### macOS Integration
+- **Finder double-click** — Set as default app for `.md` files
+- **Native tabs** — Multiple documents in tabbed windows
+- **Standard shortcuts** — Cmd+O, Cmd+P, Cmd+W, Cmd+F, and more
+- **Represented filename** — Cmd+click the title bar to see the file path in Finder
+- **Ad-hoc signed** — No Gatekeeper warnings on first launch
+
+## Installation
+
+### From DMG (recommended)
+
+1. Download `MarkdownReader-1.0.0.dmg` from the [Releases](../../releases) page
+2. Open the DMG and drag **Markdown Reader** to the Applications folder
+3. Right-click any `.md` file → Get Info → Open with → **Markdown Reader** → **Change All**
+
+### Build from source
+
+Requires macOS 13+ and Xcode Command Line Tools.
+
+```bash
+git clone https://github.com/gregy/markdown-reader.git
+cd markdown-reader
+
+# Download vendor libraries (marked.js, highlight.js, mermaid.js, KaTeX)
+bash scripts/setup.sh
+
+# Build the .app bundle
+bash scripts/build.sh
+
+# The app is at dist/Markdown Reader.app
+# Copy to Applications:
+cp -r "dist/Markdown Reader.app" /Applications/
+```
+
+To create a DMG for sharing:
+
+```bash
+bash scripts/create-dmg.sh
+# Output: dist/MarkdownReader-1.0.0.dmg
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│  macOS Native Shell (Swift / AppKit)            │
+│  ┌───────────────────────────────────────────┐  │
+│  │  NSWindow + NSToolbar                     │  │
+│  │  ┌─────────────────────────────────────┐  │  │
+│  │  │  WKWebView                          │  │  │
+│  │  │  ┌──────────┐ ┌──────────────────┐  │  │  │
+│  │  │  │ TOC      │ │ Rendered         │  │  │  │
+│  │  │  │ Sidebar  │ │ Markdown         │  │  │  │
+│  │  │  │          │ │                  │  │  │  │
+│  │  │  │ marked.js│ │ Claude-style CSS │  │  │  │
+│  │  │  │ hljs     │ │ + highlight.js   │  │  │  │
+│  │  │  │ mermaid  │ │ + mermaid        │  │  │  │
+│  │  │  │ KaTeX    │ │ + KaTeX          │  │  │  │
+│  │  │  └──────────┘ └──────────────────┘  │  │  │
+│  │  └─────────────────────────────────────┘  │  │
+│  └───────────────────────────────────────────┘  │
+│  Settings (AppKit) │ FileWatcher (GCD)          │
+└─────────────────────────────────────────────────┘
+```
+
+- **Swift layer** — Window management, menus, file I/O, settings persistence (`UserDefaults`), file change detection (`DispatchSource`)
+- **Web layer** — All rendering via `WKWebView` with custom HTML/CSS/JS. Communication between layers via `WKScriptMessageHandler`
+- **Zero pip/npm dependencies** — vendor JS libraries are downloaded once via `setup.sh` and bundled into the `.app`
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| Cmd+O | Open file |
+| Cmd+Shift+T | Toggle table of contents |
+| Cmd+U | Toggle source view |
+| Cmd+Shift+E | Export as PDF |
+| Cmd+P | Print |
+| Cmd+F | Find in document |
+| Cmd++ | Zoom in |
+| Cmd+- | Zoom out |
+| Cmd+0 | Reset zoom |
+| Cmd+\\ | Cycle content width |
+| Cmd+[ | Navigate back |
+| Cmd+] | Navigate forward |
+| Cmd+W | Close window |
+| Cmd+, | Settings |
+
+## Content Width
+
+Body text is capped at a readable width (default 720 px) and centered, following typography best practices (optimal line length: 50–75 characters). Code blocks and tables can extend slightly wider. When the window is wider, margins grow — content doesn't stretch infinitely.
+
+Configurable via Settings or Cmd+\\ to cycle through Narrow → Standard → Wide → Full.
+
+## License
+
+[MIT](LICENSE)
