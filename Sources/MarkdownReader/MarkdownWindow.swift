@@ -62,7 +62,7 @@ final class MarkdownWindowController: NSObject, WKNavigationDelegate, WKScriptMe
 
         // Create window
         let w = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 960, height: 720),
+            contentRect: NSRect(x: 0, y: 0, width: 1200, height: 1050),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
