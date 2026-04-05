@@ -1,0 +1,334 @@
+import Cocoa
+import WebKit
+
+final class MarkdownWindowController: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+
+    let window: NSWindow
+    let webView: WKWebView
+    private(set) var filePath: String?
+    private var fileWatcher: FileWatcher?
+    private var navigationHistory: [String] = []
+    private var historyIndex: Int = -1
+    private var isNavigatingHistory = false
+
+    // MARK: - Initialization
+
+    init(filePath: String? = nil) {
+        // Configure WKWebView
+        let config = WKWebViewConfiguration()
+        let ucc = WKUserContentController()
+        config.userContentController = ucc
+        config.preferences.setValue(true, forKey: "developerExtrasEnabled")
+
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.setValue(false, forKey: "drawsBackground")
+        self.webView = webView
+
+        // Create window
+        let w = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 960, height: 720),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        w.minSize = NSSize(width: 480, height: 360)
+        w.center()
+        w.tabbingMode = .automatic
+        w.titlebarAppearsTransparent = false
+        w.isReleasedWhenClosed = false
+        self.window = w
+
+        super.init()
+
+        // Register JS message handler
+        ucc.add(self, name: "app")
+
+        webView.navigationDelegate = self
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        w.contentView = webView
+
+        // Observe settings changes
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(settingsDidChange),
+            name: Settings.changedNotification, object: nil
+        )
+
+        // Load the HTML template from the app bundle's Resources
+        loadTemplate()
+
+        if let filePath = filePath {
+            // Defer file loading until the template has finished loading
+            self.filePath = filePath
+        }
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        fileWatcher?.stop()
+    }
+
+    // MARK: - Template loading
+
+    private func resourcesPath() -> String {
+        // Running inside .app bundle: <app>/Contents/MacOS/MarkdownReader
+        // Resources at: <app>/Contents/Resources/
+        if let bundlePath = Bundle.main.resourcePath {
+            let candidate = bundlePath
+            if FileManager.default.fileExists(atPath: candidate + "/template.html") {
+                return candidate
+            }
+        }
+        // Development fallback: look relative to executable
+        let execURL = URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent()
+        let devPath = execURL.deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Resources").path
+        if FileManager.default.fileExists(atPath: devPath + "/template.html") {
+            return devPath
+        }
+        // Last resort: current directory
+        let cwd = FileManager.default.currentDirectoryPath + "/Resources"
+        return cwd
+    }
+
+    private func loadTemplate() {
+        let resPath = resourcesPath()
+        let templateURL = URL(fileURLWithPath: resPath + "/template.html")
+        // Allow read access to the entire filesystem so local images in markdown work
+        webView.loadFileURL(templateURL, allowingReadAccessTo: URL(fileURLWithPath: "/"))
+    }
+
+    // MARK: - File loading
+
+    func loadFile(path: String) {
+        let resolvedPath: String
+        if path.hasPrefix("/") {
+            resolvedPath = path
+        } else if let currentDir = filePath.map({ URL(fileURLWithPath: $0).deletingLastPathComponent().path }) {
+            resolvedPath = currentDir + "/" + path
+        } else {
+            resolvedPath = path
+        }
+
+        guard FileManager.default.fileExists(atPath: resolvedPath) else { return }
+
+        // Update navigation history
+        if !isNavigatingHistory {
+            if historyIndex < navigationHistory.count - 1 {
+                navigationHistory = Array(navigationHistory.prefix(historyIndex + 1))
+            }
+            navigationHistory.append(resolvedPath)
+            historyIndex = navigationHistory.count - 1
+        }
+
+        self.filePath = resolvedPath
+        Settings.shared.addRecentFile(resolvedPath)
+
+        window.title = URL(fileURLWithPath: resolvedPath).lastPathComponent
+        window.representedFilename = resolvedPath
+
+        guard let content = try? String(contentsOfFile: resolvedPath, encoding: .utf8) else { return }
+        let baseDir = URL(fileURLWithPath: resolvedPath).deletingLastPathComponent().path
+
+        let escapedContent = escapeForJS(content)
+        let escapedPath = escapeForJS(resolvedPath)
+        let escapedBase = escapeForJS(baseDir)
+
+        let js = "render(\(escapedContent), \(escapedPath), \(escapedBase));"
+        webView.evaluateJavaScript(js, completionHandler: nil)
+
+        setupFileWatcher(path: resolvedPath)
+        listSiblingFiles(dir: baseDir)
+    }
+
+    private func setupFileWatcher(path: String) {
+        fileWatcher?.stop()
+        guard Settings.shared.autoReload else { return }
+        fileWatcher = FileWatcher(path: path) { [weak self] in
+            guard let self = self else { return }
+            // Debounce: small delay to let writes complete
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.reloadCurrentFile()
+            }
+        }
+    }
+
+    private func reloadCurrentFile() {
+        guard let path = filePath,
+              let content = try? String(contentsOfFile: path, encoding: .utf8) else { return }
+        let escaped = escapeForJS(content)
+        webView.evaluateJavaScript("reloadContent(\(escaped));", completionHandler: nil)
+    }
+
+    private func listSiblingFiles(dir: String) {
+        guard let items = try? FileManager.default.contentsOfDirectory(atPath: dir) else { return }
+        let mdFiles = items.filter { $0.hasSuffix(".md") || $0.hasSuffix(".markdown") || $0.hasSuffix(".mdx") }
+            .sorted()
+        guard let data = try? JSONSerialization.data(withJSONObject: mdFiles),
+              let json = String(data: data, encoding: .utf8) else { return }
+        let dirEscaped = escapeForJS(dir)
+        webView.evaluateJavaScript("setSiblingFiles(\(json), \(dirEscaped));", completionHandler: nil)
+    }
+
+    // MARK: - Navigation
+
+    func goBack() {
+        guard historyIndex > 0 else { return }
+        historyIndex -= 1
+        isNavigatingHistory = true
+        loadFile(path: navigationHistory[historyIndex])
+        isNavigatingHistory = false
+    }
+
+    func goForward() {
+        guard historyIndex < navigationHistory.count - 1 else { return }
+        historyIndex += 1
+        isNavigatingHistory = true
+        loadFile(path: navigationHistory[historyIndex])
+        isNavigatingHistory = false
+    }
+
+    // MARK: - Actions
+
+    func exportPDF() {
+        guard let filePath = filePath else { return }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.nameFieldStringValue = URL(fileURLWithPath: filePath)
+            .deletingPathExtension().lastPathComponent + ".pdf"
+
+        panel.beginSheetModal(for: window) { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
+            let config = WKPDFConfiguration()
+            config.rect = CGRect(x: 0, y: 0, width: 595, height: 842) // A4 in points
+            self?.webView.createPDF(configuration: config) { result in
+                if case .success(let data) = result {
+                    try? data.write(to: url)
+                }
+            }
+        }
+    }
+
+    func zoomIn() {
+        let size = min(Settings.shared.fontSize + 2, 28)
+        Settings.shared.fontSize = size
+    }
+
+    func zoomOut() {
+        let size = max(Settings.shared.fontSize - 2, 12)
+        Settings.shared.fontSize = size
+    }
+
+    func resetZoom() {
+        Settings.shared.fontSize = 16
+    }
+
+    func toggleTOC() {
+        Settings.shared.showTOC.toggle()
+    }
+
+    func toggleSource() {
+        webView.evaluateJavaScript("toggleSource();", completionHandler: nil)
+    }
+
+    func toggleContentWidth() {
+        let order = ["narrow", "standard", "wide", "full"]
+        let current = Settings.shared.contentWidth
+        if let idx = order.firstIndex(of: current) {
+            Settings.shared.contentWidth = order[(idx + 1) % order.count]
+        }
+    }
+
+    // MARK: - Settings observer
+
+    @objc private func settingsDidChange() {
+        let json = Settings.shared.toJSON()
+        webView.evaluateJavaScript("applySettings(\(json));", completionHandler: nil)
+
+        // Restart or stop file watcher based on autoReload
+        if let path = filePath {
+            if Settings.shared.autoReload {
+                if fileWatcher == nil {
+                    setupFileWatcher(path: path)
+                }
+            } else {
+                fileWatcher?.stop()
+                fileWatcher = nil
+            }
+        }
+    }
+
+    // MARK: - WKNavigationDelegate
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Template loaded — apply settings and load file if pending
+        let json = Settings.shared.toJSON()
+        webView.evaluateJavaScript("applySettings(\(json));") { [weak self] _, _ in
+            guard let self = self else { return }
+            if let path = self.filePath {
+                self.loadFile(path: path)
+            } else {
+                // Show welcome with recent files
+                let recent = Settings.shared.recentFiles
+                if let data = try? JSONSerialization.data(withJSONObject: recent),
+                   let json = String(data: data, encoding: .utf8) {
+                    webView.evaluateJavaScript("showWelcome(\(json));", completionHandler: nil)
+                }
+            }
+
+            // Restore scroll position
+            if let path = self.filePath, Settings.shared.rememberScroll {
+                let pos = Settings.shared.scrollPosition(for: path)
+                if pos > 0 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        webView.evaluateJavaScript("setScrollPosition(\(pos));", completionHandler: nil)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - WKScriptMessageHandler
+
+    func userContentController(_ userContentController: WKUserContentController,
+                               didReceive message: WKScriptMessage) {
+        guard let body = message.body as? [String: Any],
+              let type = body["type"] as? String else { return }
+
+        switch type {
+        case "openFile":
+            if let path = body["path"] as? String {
+                loadFile(path: path)
+            }
+        case "openExternal":
+            if let urlStr = body["url"] as? String, let url = URL(string: urlStr) {
+                NSWorkspace.shared.open(url)
+            }
+        case "copyToClipboard":
+            if let text = body["text"] as? String {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
+            }
+        case "saveScrollPosition":
+            if let pos = body["position"] as? Double, let path = filePath {
+                Settings.shared.setScrollPosition(pos, for: path)
+            }
+        case "browseDirectory":
+            if let dir = body["path"] as? String {
+                listSiblingFiles(dir: dir)
+            }
+        case "log":
+            if let msg = body["message"] as? String {
+                NSLog("WebView: %@", msg)
+            }
+        default:
+            break
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func escapeForJS(_ str: String) -> String {
+        let data = try! JSONSerialization.data(withJSONObject: str, options: .fragmentsAllowed)
+        return String(data: data, encoding: .utf8)!
+    }
+}

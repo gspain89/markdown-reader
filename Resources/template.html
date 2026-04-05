@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="styles.css">
+<!-- Vendor: syntax highlighting -->
+<link rel="stylesheet" href="vendor/hljs-light.css" id="hljs-light-theme">
+<link rel="stylesheet" href="vendor/hljs-dark.css" id="hljs-dark-theme" disabled>
+<script src="vendor/marked.min.js"></script>
+<script src="vendor/highlight.min.js"></script>
+<!-- Vendor: Mermaid (loaded conditionally) -->
+<script src="vendor/mermaid.min.js"></script>
+<!-- Vendor: KaTeX (loaded conditionally) -->
+<link rel="stylesheet" href="vendor/katex.min.css">
+<script src="vendor/katex.min.js"></script>
+<script src="vendor/auto-render.min.js"></script>
+</head>
+<body>
+    <!-- Reading progress bar -->
+    <div id="progress-bar" class="progress-bar"></div>
+
+    <!-- Breadcrumb path bar -->
+    <div id="breadcrumb" class="breadcrumb"></div>
+
+    <!-- TOC Sidebar -->
+    <aside id="toc-sidebar" class="toc-sidebar">
+        <div class="toc-header">
+            <span class="toc-title">Table of Contents</span>
+        </div>
+        <nav id="toc-list" class="toc-list"></nav>
+        <!-- File list (sibling .md files) -->
+        <div id="file-list-section" class="file-list-section" style="display:none">
+            <div class="toc-header"><span class="toc-title">Files</span></div>
+            <nav id="file-list" class="toc-list"></nav>
+        </div>
+    </aside>
+
+    <!-- Main content -->
+    <div class="content-wrapper">
+        <article id="content" class="content"></article>
+        <!-- Status bar -->
+        <footer id="status-bar" class="status-bar">
+            <span id="word-count"></span>
+        </footer>
+    </div>
+
+    <!-- Image zoom overlay -->
+    <div id="image-overlay" class="image-overlay" onclick="closeImageOverlay()">
+        <img src="" alt="Zoomed image">
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
