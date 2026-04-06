@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 APP_NAME="Simply Markdown Reader"
 VERSION="1.0.0"
-DMG_NAME="MarkdownReader-${VERSION}"
+DMG_NAME="SimplyMarkdownReader-${VERSION}"
 
 APP_PATH="dist/${APP_NAME}.app"
 if [ ! -d "$APP_PATH" ]; then
