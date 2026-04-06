@@ -4,6 +4,8 @@ A beautiful, native macOS Markdown viewer with warm, Claude-inspired typography 
 
 Built with Swift and WKWebView — no Electron, no bloat. Just a fast, lightweight `.app` that opens `.md` files the way they deserve to be read.
 
+![Demo](https://github.com/gspain89/simply-markdown-reader/releases/download/v1.0.0/simply-markdown-reader-demo.gif)
+
 ## Why
 
 Every developer reads Markdown daily, yet most tools render it either too plainly or require a heavyweight framework. Markdown Reader gives you a polished reading experience in a native macOS app under 2 MB, with the warm color palette and thoughtful typography inspired by Claude's artifact rendering.
