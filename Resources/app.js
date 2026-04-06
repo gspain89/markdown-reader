@@ -70,12 +70,14 @@ function initMarked() {
                 + t + ' class="zoomable" onclick="zoomImage(this)">';
         },
 
-        listitem({ text, task, checked }) {
+        listitem({ tokens, task, checked, loose }) {
             if (task) {
                 const c = checked ? ' checked' : '';
-                return '<li class="task-item"><input type="checkbox"' + c + ' disabled> ' + text + '</li>\n';
+                const body = this.parser.parse(tokens, !!loose);
+                return '<li class="task-item"><input type="checkbox"' + c + ' disabled> ' + body + '</li>\n';
             }
-            return '<li>' + text + '</li>\n';
+            // Non-task items: return false to use marked's default renderer
+            return false;
         }
     };
 
@@ -767,10 +769,7 @@ function pickFont(f) {
 
 function changeFontSize(delta) {
     var sz = Math.max(12, Math.min(28, (currentSettings.fontSize || 16) + delta));
-    currentSettings.fontSize = sz;
-    sendToSwift('updateSetting', { key: 'fontSize', value: sz });
-    var el = document.getElementById('sz-val');
-    if (el) el.textContent = sz + 'px';
+    setFontSize(sz);
 }
 
 function pickWidth(w) {
@@ -795,8 +794,7 @@ applySettings = function(s) {
     var tocBtn = document.getElementById('btn-toc');
     if (tocBtn) tocBtn.classList.toggle('active', !!s.showTOC);
     // Update toolbar font size display
-    var tbSz = document.getElementById('tb-font-size');
-    if (tbSz && s.fontSize) tbSz.textContent = s.fontSize + 'px';
+    if (s.fontSize) updateFontSizeDisplay(s.fontSize);
 };
 
 // ============================================================
@@ -805,13 +803,74 @@ applySettings = function(s) {
 
 function changeFontSizeFromToolbar(delta) {
     var sz = Math.max(12, Math.min(28, (currentSettings.fontSize || 16) + delta));
+    setFontSize(sz);
+}
+
+function setFontSize(sz) {
+    sz = Math.max(12, Math.min(28, sz));
     currentSettings.fontSize = sz;
     sendToSwift('updateSetting', { key: 'fontSize', value: sz });
+    updateFontSizeDisplay(sz);
+}
+
+function updateFontSizeDisplay(sz) {
     var tbSz = document.getElementById('tb-font-size');
-    if (tbSz) tbSz.textContent = sz + 'px';
-    // Also update settings panel if open
+    if (tbSz) {
+        // Preserve the dropdown element, update only the text node
+        var textNode = tbSz.firstChild;
+        if (textNode && textNode.nodeType === 3) {
+            textNode.textContent = sz + 'px';
+        }
+    }
     var el = document.getElementById('sz-val');
     if (el) el.textContent = sz + 'px';
+    // Update dropdown current indicator
+    var dropdown = document.getElementById('font-size-dropdown');
+    if (dropdown) {
+        var btns = dropdown.querySelectorAll('button');
+        btns.forEach(function(btn) {
+            btn.classList.toggle('current', parseInt(btn.textContent) === sz);
+        });
+    }
+}
+
+function toggleFontSizeDropdown(e) {
+    e.stopPropagation();
+    var dropdown = document.getElementById('font-size-dropdown');
+    if (!dropdown) return;
+
+    if (dropdown.classList.contains('visible')) {
+        dropdown.classList.remove('visible');
+        return;
+    }
+
+    // Build options: 12–28 px in steps of 2
+    var sizes = [12, 14, 16, 18, 20, 22, 24, 28];
+    var current = currentSettings.fontSize || 16;
+    var html = '';
+    sizes.forEach(function(sz) {
+        var cls = sz === current ? ' class="current"' : '';
+        html += '<button' + cls + ' onclick="pickFontSize(' + sz + ', event)">' + sz + 'px</button>';
+    });
+    dropdown.innerHTML = html;
+    dropdown.classList.add('visible');
+
+    // Close on outside click
+    setTimeout(function() {
+        document.addEventListener('click', closeFontSizeDropdown, { once: true });
+    }, 0);
+}
+
+function pickFontSize(sz, e) {
+    e.stopPropagation();
+    setFontSize(sz);
+    var dropdown = document.getElementById('font-size-dropdown');
+    if (dropdown) dropdown.classList.remove('visible');
+}
+
+function closeFontSizeDropdown() {
+    var dropdown = document.getElementById('font-size-dropdown');
+    if (dropdown) dropdown.classList.remove('visible');
 }
 
 // ============================================================

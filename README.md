@@ -4,13 +4,13 @@ A native macOS app for reading `.md` files. No Electron, no npm, no bloat — ju
 
 Warm light/dark themes with serif body text and clean heading typography. Opens instantly, renders everything from GFM tables to Mermaid diagrams.
 
-![Demo](https://github.com/gspain89/simply-markdown-reader/releases/download/v1.0.0/simply-markdown-reader-demo.gif)
+![Demo](https://github.com/gspain89/simply-markdown-reader/releases/download/v1.0.1/simply-markdown-reader-demo.gif)
 
 ## Installation
 
 ### Download (recommended)
 
-1. Grab `SimplyMarkdownReader-1.0.0.dmg` from the [Releases](../../releases) page
+1. Grab `SimplyMarkdownReader-1.0.1.dmg` from the [Releases](../../releases) page
 2. Open the DMG and drag **Simply Markdown Reader** to Applications
 3. To set as default: right-click any `.md` file → Get Info → Open with → **Simply Markdown Reader** → **Change All**
 
@@ -89,7 +89,7 @@ cp -r "dist/Simply Markdown Reader.app" /Applications/
 
 ```
 macOS Native Shell (Swift / AppKit)
-├── NSWindow (tabs) + DropView (drag & drop)
+├── NSWindow (tabs) + DropOverlay (drag & drop)
 ├── WKWebView
 │   ├── Sidebar: TOC, Bookmarks, Folder Tree
 │   └── Content: marked.js + highlight.js + mermaid + KaTeX
