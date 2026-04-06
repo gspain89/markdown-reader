@@ -154,21 +154,48 @@ body {
 .breadcrumb-path .current { color: var(--text-primary); font-weight: 500; cursor: default; }
 
 /* Toolbar buttons */
-.toolbar { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.toolbar { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
 .tb-btn {
-    width: 28px; height: 28px; border: none; background: transparent;
+    width: 28px; height: 28px;
+    border: 1px solid var(--border-light); background: var(--bg-primary);
     border-radius: 6px; cursor: pointer; display: flex; align-items: center;
     justify-content: center; color: var(--text-secondary); transition: all 0.15s;
     padding: 0;
 }
-.tb-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
-.tb-btn.active { background: var(--accent-light); color: var(--accent); }
+.tb-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); border-color: var(--border-medium); }
+.tb-btn:active { background: var(--bg-secondary); }
+.tb-btn.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent); }
 .tb-btn svg { width: 16px; height: 16px; }
 .tb-sep { width: 1px; height: 16px; background: var(--border-light); margin: 0 4px; }
+/* Font size dropdown trigger */
 .tb-font-size {
-    font-family: var(--code-font); font-size: 11px; color: var(--text-tertiary);
-    min-width: 30px; text-align: center; user-select: none;
+    font-family: var(--code-font); font-size: 11px; color: var(--text-secondary);
+    width: 48px; text-align: center; user-select: none;
+    cursor: pointer; padding: 4px 0;
+    border: 1px solid var(--border-light); border-radius: 6px;
+    background: var(--bg-primary); transition: all 0.15s;
+    position: relative;
 }
+.tb-font-size:hover { background: var(--bg-tertiary); border-color: var(--border-medium); color: var(--text-primary); }
+/* Font size dropdown */
+.font-size-dropdown {
+    position: absolute; top: 100%; left: -1px; right: -1px;
+    margin-top: 4px;
+    background: var(--bg-primary); border: 1px solid var(--border-medium);
+    border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 4px; z-index: 200;
+    display: none;
+}
+.font-size-dropdown.visible { display: block; }
+.font-size-dropdown button {
+    display: block; width: 100%; padding: 4px 0;
+    border: none; background: transparent; cursor: pointer;
+    font-family: var(--code-font); font-size: 11px;
+    color: var(--text-secondary); text-align: center;
+    border-radius: 4px; transition: all 0.1s;
+}
+.font-size-dropdown button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.font-size-dropdown button.current { color: var(--accent); font-weight: 600; background: var(--accent-light); }
 
 /* ============================================================
    Search Bar
@@ -573,7 +600,7 @@ p { margin: 0 0 1.2em; }
 a { color: var(--text-link); text-decoration: none; transition: color 0.15s; }
 a:hover { color: var(--text-link-hover); text-decoration: underline; }
 
-strong { font-weight: 600; }
+strong { font-weight: bold; }
 em { font-style: italic; }
 del { text-decoration: line-through; color: var(--text-secondary); }
 

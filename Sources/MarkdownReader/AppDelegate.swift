@@ -38,6 +38,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Window management
 
+    /// Public entry point for opening a file (used by drag-and-drop, etc.)
+    func openFilePath(_ path: String) {
+        openFileInWindow(path: path)
+    }
+
     private func openFileInWindow(path: String) {
         // Reuse the welcome window if it has no file
         if let existing = windowControllers.first(where: { $0.filePath == nil }) {
@@ -168,7 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func showAbout() {
         let alert = NSAlert()
         alert.messageText = "Simply Markdown Reader"
-        alert.informativeText = "A native macOS Markdown viewer\nwith warm, readable styling.\n\nVersion 1.0.0"
+        alert.informativeText = "A native macOS Markdown viewer\nwith warm, readable styling.\n\nVersion 1.0.1"
         alert.alertStyle = .informational
         alert.runModal()
     }

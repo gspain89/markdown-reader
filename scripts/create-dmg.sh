@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 APP_NAME="Simply Markdown Reader"
-VERSION="1.0.0"
+VERSION="1.0.1"
 DMG_NAME="SimplyMarkdownReader-${VERSION}"
 
 APP_PATH="dist/${APP_NAME}.app"

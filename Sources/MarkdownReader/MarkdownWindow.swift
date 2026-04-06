@@ -1,15 +1,23 @@
 import Cocoa
 import WebKit
 
-// Drop target view — accepts .md files dragged from Finder
-final class DropView: NSView {
+// Transparent overlay that sits above WKWebView to intercept file drags.
+// hitTest returns nil so all mouse/keyboard events pass through to WKWebView.
+// Drag routing in AppKit is separate from hit-testing — the topmost
+// registered view under the cursor receives drag events regardless of hitTest.
+final class DropOverlay: NSView {
     var onDrop: ((String) -> Void)?
+
+    private static let mdExts: Set<String> = ["md", "markdown", "mdown", "mkd", "mdx"]
 
     override init(frame: NSRect) {
         super.init(frame: frame)
         registerForDraggedTypes([.fileURL])
     }
     required init?(coder: NSCoder) { fatalError() }
+
+    // Pass all mouse events through to the WKWebView below
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         guard let urls = sender.draggingPasteboard.readObjects(
@@ -33,20 +41,18 @@ final class DropView: NSView {
         }
         return false
     }
-
-    private static let mdExts: Set<String> = ["md", "markdown", "mdown", "mkd", "mdx"]
 }
 
 final class MarkdownWindowController: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
 
     let window: NSWindow
     let webView: WKWebView
+    private var dropOverlay: DropOverlay!
     private(set) var filePath: String?
     private var fileWatcher: FileWatcher?
     private var navigationHistory: [String] = []
     private var historyIndex: Int = -1
     private var isNavigatingHistory = false
-    private var webViewConstraints: [NSLayoutConstraint] = []
     private var exportOverlay: NSView?
 
     // MARK: - Initialization
@@ -84,20 +90,23 @@ final class MarkdownWindowController: NSObject, WKNavigationDelegate, WKScriptMe
 
         webView.navigationDelegate = self
 
-        // Wrap WKWebView in DropView for Finder drag-and-drop support
-        let dropView = DropView(frame: .zero)
-        dropView.translatesAutoresizingMaskIntoConstraints = false
-        webView.translatesAutoresizingMaskIntoConstraints = false
-        dropView.addSubview(webView)
-        webViewConstraints = [
-            webView.topAnchor.constraint(equalTo: dropView.topAnchor),
-            webView.bottomAnchor.constraint(equalTo: dropView.bottomAnchor),
-            webView.leadingAnchor.constraint(equalTo: dropView.leadingAnchor),
-            webView.trailingAnchor.constraint(equalTo: dropView.trailingAnchor)
-        ]
-        NSLayoutConstraint.activate(webViewConstraints)
-        dropView.onDrop = { [weak self] path in self?.loadFile(path: path) }
-        w.contentView = dropView
+        // Container with WKWebView + transparent drag overlay on top
+        let container = NSView(frame: .zero)
+        webView.autoresizingMask = [.width, .height]
+        container.addSubview(webView)
+
+        let overlay = DropOverlay(frame: .zero)
+        overlay.autoresizingMask = [.width, .height]
+        overlay.onDrop = { path in
+            // Route through AppDelegate so the file opens as a new tab (same as Finder double-click)
+            if let delegate = NSApp.delegate as? AppDelegate {
+                delegate.openFilePath(path)
+            }
+        }
+        container.addSubview(overlay) // above webView
+        self.dropOverlay = overlay
+
+        w.contentView = container
 
         // Observe settings changes
         NotificationCenter.default.addObserver(
@@ -550,9 +559,6 @@ final class MarkdownWindowController: NSObject, WKNavigationDelegate, WKScriptMe
         picker.show(relativeTo: toolbarFrame, of: webView, preferredEdge: .minY)
     }
 
-    // MARK: - PDF A4 pagination
-
-    /// Splits tall PDF pages from createPDF into proper A4-sized pages
     // MARK: - Bookmarks
 
     private func toggleBookmark() {

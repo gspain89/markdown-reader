@@ -21,11 +21,11 @@
         <div id="breadcrumb" class="breadcrumb-path"></div>
         <div class="toolbar">
             <button class="tb-btn" id="btn-zoom-out" onclick="changeFontSizeFromToolbar(-1)" title="Zoom Out (⌘-)">
-                <svg viewBox="0 0 16 16"><text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-family="-apple-system,sans-serif" font-size="11" font-weight="600">A</text><line x1="11" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 16 16"><text x="50%" y="58%" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-family="-apple-system,sans-serif" font-size="13" font-weight="500">A</text></svg>
             </button>
-            <span class="tb-font-size" id="tb-font-size">16px</span>
+            <span class="tb-font-size" id="tb-font-size" onclick="toggleFontSizeDropdown(event)">16px<div class="font-size-dropdown" id="font-size-dropdown"></div></span>
             <button class="tb-btn" id="btn-zoom-in" onclick="changeFontSizeFromToolbar(1)" title="Zoom In (⌘+)">
-                <svg viewBox="0 0 16 16"><text x="50%" y="52%" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-family="-apple-system,sans-serif" font-size="14" font-weight="600">A</text><line x1="11" y1="12" x2="14" y2="12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="12.5" y1="10.5" x2="12.5" y2="13.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 16 16"><text x="50%" y="55%" text-anchor="middle" dominant-baseline="central" fill="currentColor" font-family="-apple-system,sans-serif" font-size="16" font-weight="600">A</text></svg>
             </button>
             <span class="tb-sep"></span>
             <button class="tb-btn" id="btn-bookmark" onclick="sendToSwift('toggleBookmark')" title="Bookmark (⌘D)">
