@@ -46,6 +46,8 @@ final class MarkdownWindowController: NSObject, WKNavigationDelegate, WKScriptMe
     private var navigationHistory: [String] = []
     private var historyIndex: Int = -1
     private var isNavigatingHistory = false
+    private var webViewConstraints: [NSLayoutConstraint] = []
+    private var exportOverlay: NSView?
 
     // MARK: - Initialization
 
@@ -87,12 +89,13 @@ final class MarkdownWindowController: NSObject, WKNavigationDelegate, WKScriptMe
         dropView.translatesAutoresizingMaskIntoConstraints = false
         webView.translatesAutoresizingMaskIntoConstraints = false
         dropView.addSubview(webView)
-        NSLayoutConstraint.activate([
+        webViewConstraints = [
             webView.topAnchor.constraint(equalTo: dropView.topAnchor),
             webView.bottomAnchor.constraint(equalTo: dropView.bottomAnchor),
             webView.leadingAnchor.constraint(equalTo: dropView.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: dropView.trailingAnchor)
-        ])
+        ]
+        NSLayoutConstraint.activate(webViewConstraints)
         dropView.onDrop = { [weak self] path in self?.loadFile(path: path) }
         w.contentView = dropView
 
@@ -292,14 +295,82 @@ final class MarkdownWindowController: NSObject, WKNavigationDelegate, WKScriptMe
 
         panel.beginSheetModal(for: window) { [weak self] response in
             guard response == .OK, let url = panel.url else { return }
-            let config = WKPDFConfiguration()
-            config.rect = CGRect(x: 0, y: 0, width: 595, height: 842) // A4 in points
-            self?.webView.createPDF(configuration: config) { result in
-                if case .success(let data) = result {
-                    try? data.write(to: url)
-                }
-            }
+            guard let self = self else { return }
+
+            self.exportOverlay = self.showExportOverlay()
+
+            // Force highlight.js to light theme before printing
+            self.webView.evaluateJavaScript("forceLightThemeForPrint();", completionHandler: nil)
+
+            let printInfo = NSPrintInfo()
+            printInfo.paperSize = NSSize(width: 595, height: 842) // A4
+            printInfo.topMargin = 40
+            printInfo.bottomMargin = 40
+            printInfo.leftMargin = 40
+            printInfo.rightMargin = 40
+            printInfo.isHorizontallyCentered = false
+            printInfo.isVerticallyCentered = false
+            printInfo.jobDisposition = .save
+            printInfo.dictionary().setValue(
+                url, forKey: NSPrintInfo.AttributeKey.jobSavingURL.rawValue)
+
+            let printOp = self.webView.printOperation(with: printInfo)
+            printOp.showsPrintPanel = false
+            printOp.showsProgressPanel = false
+            printOp.canSpawnSeparateThread = true
+
+            // runModal runs a nested event loop — WKWebView rendering
+            // continues (unlike run() which blocks and deadlocks).
+            printOp.runModal(
+                for: self.window,
+                delegate: self,
+                didRun: #selector(self.printOperationDidRun(_:success:contextInfo:)),
+                contextInfo: nil)
         }
+    }
+
+    @objc private func printOperationDidRun(
+        _ op: NSPrintOperation, success: Bool, contextInfo: UnsafeMutableRawPointer?
+    ) {
+        // Callback fires on a background thread — UI must run on main
+        DispatchQueue.main.async { [weak self] in
+            self?.exportOverlay?.removeFromSuperview()
+            self?.exportOverlay = nil
+            self?.webView.evaluateJavaScript("restoreThemeAfterPrint();", completionHandler: nil)
+        }
+    }
+
+    private func showExportOverlay() -> NSView {
+        let contentView = window.contentView!
+        let overlay = NSView(frame: contentView.bounds)
+        overlay.autoresizingMask = [.width, .height]
+        overlay.wantsLayer = true
+        overlay.layer?.backgroundColor = NSColor(white: 0, alpha: 0.35).cgColor
+
+        let boxW: CGFloat = 220, boxH: CGFloat = 80
+        let box = NSView(frame: NSRect(
+            x: (overlay.bounds.width - boxW) / 2,
+            y: (overlay.bounds.height - boxH) / 2,
+            width: boxW, height: boxH))
+        box.wantsLayer = true
+        box.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        box.layer?.cornerRadius = 12
+        box.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin, .maxYMargin]
+
+        let spinner = NSProgressIndicator(frame: NSRect(x: (boxW - 32) / 2, y: 42, width: 32, height: 32))
+        spinner.style = .spinning
+        spinner.startAnimation(nil)
+        box.addSubview(spinner)
+
+        let label = NSTextField(labelWithString: "Exporting PDF…")
+        label.frame = NSRect(x: 0, y: 12, width: boxW, height: 20)
+        label.alignment = .center
+        label.font = NSFont.systemFont(ofSize: 13)
+        box.addSubview(label)
+
+        overlay.addSubview(box)
+        contentView.addSubview(overlay)
+        return overlay
     }
 
     func zoomIn() {
@@ -479,6 +550,9 @@ final class MarkdownWindowController: NSObject, WKNavigationDelegate, WKScriptMe
         picker.show(relativeTo: toolbarFrame, of: webView, preferredEdge: .minY)
     }
 
+    // MARK: - PDF A4 pagination
+
+    /// Splits tall PDF pages from createPDF into proper A4-sized pages
     // MARK: - Bookmarks
 
     private func toggleBookmark() {

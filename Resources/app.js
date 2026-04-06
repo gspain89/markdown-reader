@@ -618,10 +618,14 @@ function doExportPDF() {
     document.getElementById('export-popover').style.display = 'none';
     sendToSwift('exportPDF');
 }
-function doCopyHTML() {
-    document.getElementById('export-popover').style.display = 'none';
-    var html = document.getElementById('content').innerHTML;
-    sendToSwift('copyToClipboard', { text: html });
+function forceLightThemeForPrint() {
+    var light = document.getElementById('hljs-light-theme');
+    var dark = document.getElementById('hljs-dark-theme');
+    if (light) light.disabled = false;
+    if (dark) dark.disabled = true;
+}
+function restoreThemeAfterPrint() {
+    applySettings(currentSettings || {});
 }
 function doShare() {
     document.getElementById('export-popover').style.display = 'none';

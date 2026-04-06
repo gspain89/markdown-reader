@@ -304,6 +304,7 @@ mark.search-hl.current {
     background: rgba(0,0,0,0.4); z-index: 500;
     display: flex; align-items: flex-start; justify-content: center;
     padding-top: 50px;
+    overflow: hidden;
     animation: fadeIn 0.2s;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -314,6 +315,7 @@ mark.search-hl.current {
     width: 460px;
     max-height: calc(100vh - 100px);
     overflow-y: auto;
+    overscroll-behavior: contain;
     box-shadow: 0 20px 60px rgba(0,0,0,0.25);
     animation: slideDown 0.2s ease;
 }
@@ -921,6 +923,153 @@ img.zoomable:hover { transform: scale(1.01); }
     pre, table, blockquote, figure { page-break-inside: avoid; }
     a { color: inherit; text-decoration: underline; }
     a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.8em; color: #888; }
+}
+
+/* ============================================================
+   PDF Export mode (createPDF approach — Export as PDF menu)
+   ============================================================ */
+body.pdf-export .progress-bar,
+body.pdf-export .top-bar,
+body.pdf-export .search-bar,
+body.pdf-export .toc-sidebar,
+body.pdf-export .status-bar,
+body.pdf-export .code-copy-btn,
+body.pdf-export .heading-anchor,
+body.pdf-export .image-overlay,
+body.pdf-export .settings-overlay,
+body.pdf-export .export-popover,
+body.pdf-export .frontmatter-bar { display: none !important; }
+
+body.pdf-export {
+    font-size: 11px !important;
+    line-height: 1.6 !important;
+}
+body.pdf-export .content-wrapper {
+    margin-left: 0 !important;
+    min-height: auto !important;
+}
+body.pdf-export .content {
+    max-width: none !important;
+    padding: 28px 32px 36px !important;
+}
+body.pdf-export table {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+    font-size: 0.78em !important;
+    word-wrap: break-word !important;
+}
+body.pdf-export th, body.pdf-export td {
+    padding: 5px 8px !important;
+    word-wrap: break-word !important;
+}
+body.pdf-export h1 { font-size: 1.6em !important; }
+body.pdf-export h2 { font-size: 1.3em !important; }
+body.pdf-export h3 { font-size: 1.1em !important; }
+body.pdf-export pre { white-space: pre-wrap !important; word-wrap: break-word !important; font-size: 0.85em !important; }
+body.pdf-export img { max-width: 100% !important; }
+body.pdf-export a { color: inherit; text-decoration: underline; }
+
+/* ============================================================
+   Print stylesheet (Cmd+P — WebKit print engine, proper breaks)
+   ============================================================ */
+@media print {
+    /* Force light mode — always export with light theme */
+    :root, html, html[data-theme="dark"] {
+        --bg-primary:      #FAF9F6 !important;
+        --bg-secondary:    #F3F1EC !important;
+        --bg-tertiary:     #E8E5DE !important;
+        --bg-code-inline:  #EFECE5 !important;
+        --bg-code-block:   #F6F4EF !important;
+        --bg-blockquote:   #F3F1EC !important;
+        --text-primary:    #1A1A1A !important;
+        --text-secondary:  #6B6560 !important;
+        --text-tertiary:   #9A9590 !important;
+        --text-link:       #B35C2A !important;
+        --text-link-hover: #8B4720 !important;
+        --border-light:    #E5E1DA !important;
+        --border-medium:   #D5D0C8 !important;
+        --accent:          #D97B4A !important;
+        --accent-light:    #F5E6DA !important;
+        color-scheme: light !important;
+    }
+
+    /* Hide UI chrome */
+    .progress-bar, .top-bar, .search-bar, .toc-sidebar,
+    .status-bar, .code-copy-btn, .heading-anchor,
+    .image-overlay, .settings-overlay, .export-popover,
+    .frontmatter-bar { display: none !important; }
+
+    body {
+        font-size: 11px !important;
+        line-height: 1.7 !important;
+        background: white !important;
+        color: #1A1A1A !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .content-wrapper { margin-left: 0 !important; min-height: auto !important; }
+    .content { max-width: none !important; padding: 0 !important; }
+
+    /* Page break control */
+    h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; }
+    pre, blockquote, figure, img, table { break-inside: avoid; page-break-inside: avoid; }
+    p, li { orphans: 3; widows: 3; }
+
+    /* Preserve code block styling */
+    pre {
+        white-space: pre-wrap !important;
+        word-wrap: break-word !important;
+        font-size: 0.85em !important;
+        background: #F6F4EF !important;
+        border: 1px solid #E8E5DE !important;
+        border-radius: 8px !important;
+        padding: 16px !important;
+    }
+    code {
+        font-family: "SF Mono", Menlo, monospace !important;
+    }
+    /* Inline code */
+    :not(pre) > code {
+        background: #EFECE5 !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+    }
+
+    /* Preserve blockquote styling */
+    blockquote {
+        border-left: 3px solid #D4A574 !important;
+        background: #F3F1EC !important;
+        padding: 12px 16px !important;
+        margin-left: 0 !important;
+    }
+
+    /* Headings */
+    h1 { font-size: 1.6em !important; color: #1A1A1A !important; }
+    h2 { font-size: 1.3em !important; color: #1A1A1A !important; }
+    h3 { font-size: 1.1em !important; color: #1A1A1A !important; }
+
+    /* Tables */
+    table {
+        width: 100% !important;
+        table-layout: fixed !important;
+        font-size: 0.78em !important;
+        border-collapse: collapse !important;
+    }
+    th {
+        background: #F3F1EC !important;
+        font-weight: 600 !important;
+    }
+    th, td {
+        border: 1px solid #E8E5DE !important;
+        padding: 6px 10px !important;
+        word-wrap: break-word !important;
+    }
+
+    /* Links */
+    a { color: #B35C2A !important; text-decoration: underline; }
+
+    img { max-width: 100% !important; }
 }
 
 /* ============================================================
