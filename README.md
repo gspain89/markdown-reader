@@ -35,7 +35,7 @@ Every developer reads Markdown daily, yet most tools render it either too plainl
 
 ### Productivity
 - **Auto-reload** — File changes are detected and the view refreshes automatically (great for editing in another tool)
-- **Export & Share** — Export popover with PDF export, Copy as HTML, and macOS Share sheet
+- **Export & Share** — Export popover with PDF export (proper A4 pagination, margins, always light theme) and macOS Share sheet
 - **Source view toggle** — Switch between rendered and raw Markdown (Cmd+U)
 - **Scroll position memory** — Reopen a file and continue where you left off
 - **Word count & reading time** — Shown in the status bar
