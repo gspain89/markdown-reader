@@ -2,7 +2,7 @@
 
 A native macOS app for reading `.md` files. No Electron, no npm, no bloat — just Swift + WKWebView in under 2 MB.
 
-Warm, Claude-inspired light/dark themes with serif body text and clean heading typography. Opens instantly, renders everything from GFM tables to Mermaid diagrams.
+Warm light/dark themes with serif body text and clean heading typography. Opens instantly, renders everything from GFM tables to Mermaid diagrams.
 
 ![Demo](https://github.com/gspain89/simply-markdown-reader/releases/download/v1.0.0/simply-markdown-reader-demo.gif)
 
