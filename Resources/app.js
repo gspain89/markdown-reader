@@ -1082,14 +1082,24 @@ function setFolderTree(tree, rootDir) {
 
     var section = document.getElementById('file-list-section');
     var list = document.getElementById('file-list');
-
-    // Change header to "Files"
     section.style.display = '';
-    list.innerHTML = renderFolderNode(tree, rootDir, 0);
 
-    // Hide parent button only at filesystem root
-    var btn = document.getElementById('files-parent-btn');
-    if (btn) btn.style.display = (rootDir && rootDir !== '/') ? '' : 'none';
+    var html = '';
+    // Prepend a "parent folder" row unless we're at the filesystem root
+    if (rootDir && rootDir !== '/') {
+        var trimmed = rootDir.replace(/\/+$/, '');
+        var parts = trimmed.split('/');
+        var parentName = parts[parts.length - 2] || '/';
+        html += '<a class="tree-parent" onclick="goToParentFolder()">'
+            + '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round">'
+            + '<path d="M2 5.5 L6 5.5 L7 6.5 L14 6.5 L14 13 L2 13 Z"/>'
+            + '<path d="M8 11 L8 8 M6.5 9.5 L8 8 L9.5 9.5" stroke-linecap="round"/>'
+            + '</svg>'
+            + '<span class="tree-parent-name">' + escapeHtml(parentName) + '</span>'
+            + '</a>';
+    }
+    html += renderFolderNode(tree, rootDir, 0);
+    list.innerHTML = html;
 }
 
 function goToParentFolder() {

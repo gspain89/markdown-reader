@@ -66,9 +66,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let wc = MarkdownWindowController(filePath: path)
         windowControllers.append(wc)
 
-        // Add as tab to existing window if one exists
-        if let existingWindow = windowControllers.first(where: { $0 !== wc })?.window {
-            existingWindow.addTabbedWindow(wc.window, ordered: .above)
+        // Insert the new tab immediately to the right of the currently active
+        // tab — not at the far end. `.above` inserts after the reference
+        // window in tab order, so if tabs are [1|2|3] and the user acts from
+        // tab 2, the result is [1|2|new|3].
+        let reference = NSApp.keyWindow
+            ?? windowControllers.first(where: { $0 !== wc })?.window
+        if let reference = reference {
+            reference.addTabbedWindow(wc.window, ordered: .above)
         }
         wc.window.makeKeyAndOrderFront(nil)
     }
